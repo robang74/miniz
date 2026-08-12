@@ -1,5 +1,6 @@
 #include "catch_amalgamated.hpp"
 #include "../miniz.h"
+#include "miniz_zip.h"
 #include <assert.h>
 #include <string>
 
@@ -10,11 +11,11 @@
 #endif
 
 #ifndef MINIZ_NO_STDIO
-bool create_test_zip()
+bool create_test_zip(const bool zip64)
 {
     unlink("test.zip");
     mz_zip_archive zip_archive = {};
-    auto b = mz_zip_writer_init_file(&zip_archive, "test.zip", 0);
+    auto b = mz_zip_writer_init_file_v2(&zip_archive, "test.zip", 0, zip64 ? MZ_ZIP_FLAG_WRITE_ZIP64 : 0);
     if (!b)
         return false;
 
@@ -35,7 +36,7 @@ bool create_test_zip()
 
 TEST_CASE("Zip writer tests")
 {
-    auto b = create_test_zip();
+    auto b = create_test_zip(false);
     REQUIRE(b);
 
     SECTION("Test test.txt content correct")
@@ -82,6 +83,59 @@ TEST_CASE("Zip writer tests")
         }
     }
 }
+
+TEST_CASE("Zip reader tests")
+{
+    const auto b = create_test_zip(true);
+    REQUIRE(b);
+
+    SECTION("Test zip file reading")
+    {
+        mz_zip_archive zip_archive = {};
+
+        auto b = mz_zip_reader_init_file(&zip_archive, "test.zip", 0);
+        REQUIRE(b);
+
+        size_t num_files = mz_zip_reader_get_num_files(&zip_archive);
+        REQUIRE(num_files == 1);
+
+        mz_zip_archive_file_stat file_stat;
+        b = mz_zip_reader_file_stat(&zip_archive, 0, &file_stat);
+        REQUIRE(b);
+
+        REQUIRE(file_stat.m_file_index == 0);
+        REQUIRE(file_stat.m_uncomp_size == 3);
+        REQUIRE(file_stat.m_comp_size == 3);
+        REQUIRE(std::string_view(file_stat.m_filename) == "test.txt");
+
+        mz_zip_reader_end(&zip_archive);
+    }
+
+    SECTION("Test central dir overflow")
+    {
+        auto f = fopen("test.zip", "rb");
+        REQUIRE(f);
+        char buf[1000];
+        const auto read = fread(buf, 1, 1000, f);
+        fclose(f);
+
+        unsigned long long cdir_ofs = -1;
+        memcpy(buf + 159, &cdir_ofs, sizeof(cdir_ofs));
+
+        unlink("test.zip");
+        f = fopen("test.zip", "wb");
+        REQUIRE(f);
+        fwrite(buf, 1, read, f);
+        fclose(f);
+
+        mz_zip_archive zip_archive = {};
+
+        auto b = mz_zip_reader_init_file(&zip_archive, "test.zip", 0);
+        REQUIRE(!b);
+        REQUIRE(zip_archive.m_last_error == MZ_ZIP_INVALID_HEADER_OR_CORRUPTED);
+    }
+}
+
 #endif
 
 TEST_CASE("Tinfl / tdefl tests")

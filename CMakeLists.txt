@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...3.12)
+cmake_minimum_required(VERSION 3.5)
 
 # determine whether this is a standalone project or included by other projects
 set (MINIZ_STANDALONE_PROJECT ON)
@@ -26,7 +26,7 @@ endif()
 
 set(MINIZ_API_VERSION 3)
 set(MINIZ_MINOR_VERSION 1)
-set(MINIZ_PATCH_VERSION 1)
+set(MINIZ_PATCH_VERSION 2)
 set(MINIZ_VERSION
     ${MINIZ_API_VERSION}.${MINIZ_MINOR_VERSION}.${MINIZ_PATCH_VERSION})
 

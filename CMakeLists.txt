@@ -49,9 +49,7 @@ option(INSTALL_PROJECT "Install project" ${MINIZ_STANDALONE_PROJECT})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
-if(INSTALL_PROJECT)
-  include(GNUInstallDirs)
-endif()
+include(GNUInstallDirs)
 
 if(BUILD_HEADER_ONLY)
   set(AMALGAMATE_SOURCES ON CACHE BOOL "Build a header-only version" FORCE)
